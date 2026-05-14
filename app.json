@@ -13,7 +13,14 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.momentum.journal.expo",
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app uses the camera to capture photos and videos for your journal entries.",
+        "NSMicrophoneUsageDescription": "This app uses the microphone to record audio notes for your journal entries.",
+        "NSPhotoLibraryUsageDescription": "This app accesses your photo library to let you choose photos and videos for your journal entries.",
+        "NSPhotoLibraryAddUsageDescription": "This app saves photos and videos to your library."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -21,10 +28,18 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.momentum.journal.expo"
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-audio",
+      "expo-video",
+      "expo-font",
+      "expo-camera",
+      "expo-image-picker"
+    ]
   }
 }
