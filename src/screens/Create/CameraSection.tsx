@@ -18,10 +18,7 @@ const CameraSection: React.FC<CameraSectionProps> = ({
   const [permission] = useCameraPermissions();
 
   return (
-    <Animated.View style={[
-      styles.container, 
-      { height: Platform.OS === 'web' ? (on ? 280 : 0) : h }
-    ]}>
+    <Animated.View style={[styles.container, { height: h }]}>
       {/* Hiển thị Camera nếu đã cấp quyền và đang ở trạng thái ON */}
       {on && permission?.granted ? (
         <>
