@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Platform } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -18,15 +18,19 @@ const CameraSection: React.FC<CameraSectionProps> = ({
   const [permission] = useCameraPermissions();
 
   return (
-    <Animated.View style={[styles.container, { height: h }]}>
+    <Animated.View style={[
+      styles.container, 
+      { height: Platform.OS === 'web' ? (on ? 280 : 0) : h }
+    ]}>
       {/* Hiển thị Camera nếu đã cấp quyền và đang ở trạng thái ON */}
       {on && permission?.granted ? (
         <>
           <CameraView 
+            key={on ? 'camera-on' : 'camera-off'}
             ref={camRef} 
-            style={styles.cam} 
-            facing="back" 
-            responsiveOrientationWhenLocked 
+            style={[styles.cam, Platform.OS === 'web' && { width: '100%', height: '100%' }]} 
+            facing="back"
+            ratio="4:3"
             active={on}
           />
           <View style={[styles.overlay, StyleSheet.absoluteFillObject]}>
