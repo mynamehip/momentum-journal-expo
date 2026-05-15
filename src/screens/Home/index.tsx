@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo, useRef } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Alert, Modal, Animated, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Alert, Modal, Animated, ActivityIndicator, DeviceEventEmitter } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -44,6 +44,15 @@ const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const [showOptions, setShowOptions] = useState(false);
   const [activeEntry, setActiveEntry] = useState<JournalEntry | null>(null);
   const slideAnim = useRef(new Animated.Value(300)).current; // Vi tri bat dau cua sheet (ngoai man hinh)
+  
+  // Lang nghe su kien lam moi du lieu
+  React.useEffect(() => {
+    const sub = DeviceEventEmitter.addListener('refresh_home', () => {
+      console.log('HomeScreen: Nhận tín hiệu refresh_home, đang tải lại...');
+      load();
+    });
+    return () => sub.remove();
+  }, [load]);
 
   // Ham mo Modal voi animation
   const openOptions = (e: JournalEntry) => {

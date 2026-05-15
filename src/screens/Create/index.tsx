@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Animated, PanResponder, LayoutChangeEvent, Modal } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Animated, PanResponder, LayoutChangeEvent, Modal, DeviceEventEmitter } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
@@ -124,6 +124,8 @@ const CreateScreen: React.FC<Props> = ({ visible, onClose, onSaved }) => {
       await saveEntryToDestinations(destinations.length ? destinations : ['personal'], entry, user?.uid || null);
       setSaving(false);
       reset();
+      // Phát tín hiệu làm mới dữ liệu cho màn hình Home
+      DeviceEventEmitter.emit('refresh_home');
       onSaved();
     } catch (e) {
       setSaving(false);
