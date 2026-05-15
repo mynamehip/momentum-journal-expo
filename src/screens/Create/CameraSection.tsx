@@ -22,7 +22,13 @@ const CameraSection: React.FC<CameraSectionProps> = ({
       {/* Hiển thị Camera nếu đã cấp quyền và đang ở trạng thái ON */}
       {on && permission?.granted ? (
         <>
-          <CameraView ref={camRef} style={styles.cam} facing="back" ratio="4:3" mute={true} />
+          <CameraView 
+            ref={camRef} 
+            style={styles.cam} 
+            facing="back" 
+            responsiveOrientationWhenLocked 
+            active={on}
+          />
           <View style={[styles.overlay, StyleSheet.absoluteFillObject]}>
             {/* Nút chụp ảnh */}
             <TouchableOpacity style={styles.btn} onPress={onSnap} activeOpacity={0.8}>
