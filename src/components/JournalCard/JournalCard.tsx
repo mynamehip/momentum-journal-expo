@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { JournalEntry, MomentType } from '../../types';
@@ -44,7 +44,11 @@ const JournalCard = React.forwardRef<any, JournalCardProps>(({ entry, onPress, o
       {entry.mediaUrl && (entry.type === MomentType.PHOTO || entry.type === MomentType.VIDEO) && (
         <View style={styles.polaroidImageWrapper}>
           <Image
-            source={{ uri: entry.localUri || optimizeCloudinaryUrl(entry.mediaUrl, 500) }}
+            source={{ 
+              uri: Platform.OS === 'web' 
+                ? optimizeCloudinaryUrl(entry.mediaUrl, 500) 
+                : (entry.localUri || optimizeCloudinaryUrl(entry.mediaUrl, 500)) 
+            }}
             style={styles.polaroidImage}
             resizeMode="cover"
           />
