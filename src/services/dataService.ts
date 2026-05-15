@@ -419,6 +419,15 @@ export const getGroupEntries = async (groupId: string): Promise<JournalEntry[]> 
   return entries;
 };
 
+export const deleteGroupEntry = async (groupId: string, entryId: string): Promise<void> => {
+  try {
+    await deleteDoc(doc(db, 'groups', groupId, 'entries', entryId));
+  } catch (error) {
+    console.error('Error deleting group entry:', error);
+    throw error;
+  }
+};
+
 export const saveEntryToDestinations = async (
   destinations: string[], 
   entry: Omit<JournalEntry, 'id'>,

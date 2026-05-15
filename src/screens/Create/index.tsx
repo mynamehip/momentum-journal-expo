@@ -119,6 +119,7 @@ const CreateScreen: React.FC<Props> = ({ visible, onClose, onSaved }) => {
       privacy: PrivacyLevel.PRIVATE,
       ...(mediaUrl ? { mediaUrl } : {}),
       location: 'Home',
+      userName: user?.displayName || undefined,
     };
     try {
       await saveEntryToDestinations(destinations.length ? destinations : ['personal'], entry, user?.uid || null);

@@ -27,8 +27,14 @@ const JournalCard = React.forwardRef<any, JournalCardProps>(({ entry, onPress, o
       activeOpacity={0.9}
       style={[styles.polaroid, { shadowColor: '#000' }]}
     >
-      {/* Top Border: Time */}
+      {/* Top Border: User Name (if group) & Time */}
       <View style={styles.polaroidTop}>
+        {entry.groupId && entry.userName ? (
+          <Text style={styles.polaroidUser} numberOfLines={1}>
+            {entry.userName}
+          </Text>
+        ) : <View />}
+        
         <Text style={styles.polaroidTime}>
           {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </Text>
@@ -79,7 +85,16 @@ const styles = StyleSheet.create({
   },
   polaroidTop: {
     paddingBottom: 2,
-    alignItems: 'flex-end',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  polaroidUser: {
+    fontSize: 9,
+    fontWeight: '600',
+    color: '#505050ff',
+    fontFamily: 'Mansalva',
+    maxWidth: '60%',
   },
   polaroidTime: {
     fontSize: 9,

@@ -24,6 +24,7 @@ export interface JournalEntry {
   privacy: PrivacyLevel;
   location?: string;
   groupId?: string;
+  userName?: string;
 }
 
 export interface User {

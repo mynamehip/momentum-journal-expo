@@ -1,15 +1,18 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Modal, Share, Alert, TextInput } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Modal, Share, Alert, TextInput, Animated, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation, useRoute, RouteProp, NavigationProp } from '@react-navigation/native';
 import { JournalEntry, Group } from '../../types';
-import { getGroupEntries, leaveGroup, setLocalGroupName } from '../../services/dataService';
+import { getGroupEntries, leaveGroup, setLocalGroupName, deleteGroupEntry } from '../../services/dataService';
 import { useTheme } from '../../theme';
 import { useAuth } from '../../context';
 import { JournalCard } from '../../components';
 import { formatDate, isToday, getMoodEmoji } from '../../utils';
 import DayGroupHeader from '../Home/DayGroupHeader';
+import * as MediaLibrary from 'expo-media-library';
+import { captureRef } from 'react-native-view-shot';
+import { useRef } from 'react';
 
 type RootStackParamList = {
   MainTabs: undefined;
@@ -39,6 +42,12 @@ const GroupDetailScreen: React.FC = () => {
   const [localName, setLocalName] = useState(group.localName || group.name);
   const [showRename, setShowRename] = useState(false);
   const [newName, setNewName] = useState(localName);
+
+  // Options Modal State
+  const [showOptions, setShowOptions] = useState(false);
+  const [activeEntry, setActiveEntry] = useState<JournalEntry | null>(null);
+  const slideAnim = useRef(new Animated.Value(300)).current;
+  const cardRefs = useRef<Record<string, any>>({});
 
   const load = useCallback(async () => {
     const list = await getGroupEntries(group.id);
@@ -87,6 +96,48 @@ const GroupDetailScreen: React.FC = () => {
         }
       ]
     );
+  };
+
+  // --- Chức năng Lưu/Xóa bài viết (Long Press) ---
+  const openOptions = (e: JournalEntry) => {
+    setActiveEntry(e);
+    setShowOptions(true);
+    Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, tension: 50, friction: 8 }).start();
+  };
+
+  const closeOptions = () => {
+    Animated.timing(slideAnim, { toValue: 300, duration: 100, useNativeDriver: true }).start(() => {
+      setShowOptions(false);
+      setActiveEntry(null);
+    });
+  };
+
+  const saveCardAsImage = async (entryId: string) => {
+    try {
+      const { status } = await MediaLibrary.requestPermissionsAsync(true);
+      if (status !== 'granted') return Alert.alert('Quyền truy cập', 'Vui lòng cấp quyền truy cập thư viện ảnh.');
+      const uri = await captureRef(cardRefs.current[entryId], { format: 'png', quality: 1 });
+      await MediaLibrary.saveToLibraryAsync(uri);
+      Alert.alert('Thành công', 'Đã lưu ảnh vào thư viện!');
+    } catch (e) {
+      Alert.alert('Lỗi', 'Không thể lưu ảnh.');
+    }
+  };
+
+  const confirmDelete = () => {
+    if (!activeEntry) return;
+    Alert.alert('Xác nhận xóa', 'Bạn có chắc chắn muốn xóa bài viết này không?', [
+      { text: 'Hủy', style: 'cancel' },
+      { 
+        text: 'Xóa', 
+        style: 'destructive', 
+        onPress: async () => {
+          await deleteGroupEntry(group.id, activeEntry.id);
+          closeOptions();
+          load();
+        } 
+      }
+    ]);
   };
 
   const groups: DayGroup[] = useMemo(() => {
@@ -159,7 +210,12 @@ const GroupDetailScreen: React.FC = () => {
                     </View>
                     
                     <View style={styles.cardWrapper}>
-                      <JournalCard entry={e} onPress={() => navigation.navigate('EntryDetail', { entry: e })} />
+                      <JournalCard 
+                        ref={(r: any) => { if (r) cardRefs.current[e.id] = r; }}
+                        entry={e} 
+                        onPress={() => navigation.navigate('EntryDetail', { entry: e })} 
+                        onLongPress={() => openOptions(e)}
+                      />
                     </View>
                   </View>
                 ))}
@@ -235,6 +291,39 @@ const GroupDetailScreen: React.FC = () => {
         </View>
       </Modal>
 
+      {/* Options Modal (Save/Delete) */}
+      <Modal visible={showOptions} transparent animationType="none">
+        <View style={styles.modalBg}>
+          <TouchableOpacity style={styles.modalBgClick} activeOpacity={1} onPress={closeOptions} />
+          <Animated.View style={[styles.optionSheet, { backgroundColor: colors.card, transform: [{ translateY: slideAnim }] }]}>
+            <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
+            
+            <TouchableOpacity 
+              style={styles.sheetItem} 
+              onPress={() => { closeOptions(); saveCardAsImage(activeEntry?.id || ''); }}
+            >
+              <View style={[styles.sheetIcon, { backgroundColor: colors.primary + '15' }]}>
+                <Ionicons name="download-outline" size={20} color={colors.primary} />
+              </View>
+              <Text style={[styles.sheetText, { color: colors.text }]}>Lưu bài viết thành ảnh</Text>
+            </TouchableOpacity>
+
+            {activeEntry?.userId === user?.uid && (
+              <TouchableOpacity style={styles.sheetItem} onPress={confirmDelete}>
+                <View style={[styles.sheetIcon, { backgroundColor: '#fee2e2' }]}>
+                  <Ionicons name="trash-outline" size={20} color="#ef4444" />
+                </View>
+                <Text style={[styles.sheetText, { color: '#ef4444' }]}>Xóa bài viết</Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity style={[styles.cancelBtn, { backgroundColor: colors.inputBackground }]} onPress={closeOptions}>
+              <Text style={[styles.cancelText, { color: colors.textSecondary }]}>Hủy</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </View>
+      </Modal>
+
     </View>
   );
 };
@@ -256,7 +345,15 @@ const styles = StyleSheet.create({
   timelineNodeMood: { width: 30, height: 30, borderRadius: 15, borderWidth: 1, position: 'absolute', left: 1, top: 24, justifyContent: 'center', alignItems: 'center', zIndex: 1 },
   cardWrapper: { flex: 1, marginLeft: 48, marginRight: 10, marginBottom: 12 },
 
-  modalBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+  modalBgClick: { ...StyleSheet.absoluteFillObject },
+  optionSheet: { width: '100%', padding: 20, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingBottom: 40 },
+  sheetHandle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 20 },
+  sheetItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, marginBottom: 8 },
+  sheetIcon: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginRight: 16 },
+  sheetText: { fontSize: 16, fontWeight: '500' },
+  cancelBtn: { marginTop: 12, paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
+  cancelText: { fontSize: 16, fontWeight: 'bold' },
   modalBox: { width: '100%', padding: 20, borderTopLeftRadius: 24, borderTopRightRadius: 24 },
   mHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   mTitle: { fontSize: 18, fontWeight: 'bold' },
