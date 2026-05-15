@@ -69,10 +69,6 @@ const RegisterForm: React.FC = () => {
         createdAt: new Date() 
       });
       console.log('--- Đăng ký hoàn tất thành công ---');
-      
-      if (Platform.OS === 'web') {
-        alert('Đăng ký thành công!');
-      }
     } catch (err: any) {
       console.error('Lỗi đăng ký:', err.code, err.message);
       Alert.alert('Đăng ký thất bại', err.message);

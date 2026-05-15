@@ -45,14 +45,6 @@ const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const [activeEntry, setActiveEntry] = useState<JournalEntry | null>(null);
   const slideAnim = useRef(new Animated.Value(300)).current; // Vi tri bat dau cua sheet (ngoai man hinh)
   
-  // Lang nghe su kien lam moi du lieu
-  React.useEffect(() => {
-    const sub = DeviceEventEmitter.addListener('refresh_home', () => {
-      console.log('HomeScreen: Nhận tín hiệu refresh_home, đang tải lại...');
-      load();
-    });
-    return () => sub.remove();
-  }, [load]);
 
   // Ham mo Modal voi animation
   const openOptions = (e: JournalEntry) => {
@@ -103,6 +95,15 @@ const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
 
   // Tự động tải lại dữ liệu khi màn hình được focus
   useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  // Lang nghe su kien lam moi du lieu tu Modal Create
+  React.useEffect(() => {
+    const sub = DeviceEventEmitter.addListener('refresh_home', () => {
+      console.log('HomeScreen: Nhận tín hiệu refresh_home, đang tải lại...');
+      load();
+    });
+    return () => sub.remove();
+  }, [load]);
 
   // Xử lý kéo để làm mới (Pull to refresh)
   const onRef = () => {
