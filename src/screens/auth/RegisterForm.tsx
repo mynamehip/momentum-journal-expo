@@ -40,28 +40,41 @@ const RegisterForm: React.FC = () => {
     }
 
     setLoading(true);
+    console.log('--- Bắt đầu đăng ký ---');
     try {
       // 1. Kiểm tra trùng tên
+      console.log('1. Đang kiểm tra tên người dùng:', name);
       const taken = await isUsernameTaken(name);
       if (taken) {
+        console.warn('Tên người dùng đã tồn tại');
         Alert.alert('Lỗi', 'Tên người dùng này đã được sử dụng. Vui lòng chọn tên khác.');
         setLoading(false);
         return;
       }
 
       // 2. Tạo tài khoản mới với Firebase
+      console.log('2. Đang tạo tài khoản Firebase Auth cho:', email);
       const cred = await createUserWithEmailAndPassword(auth, email, pass);
+      console.log('Tạo tài khoản thành công UID:', cred.user.uid);
       
       // 3. Cập nhật profile Firebase Auth
+      console.log('3. Đang cập nhật Display Name:', name);
       await updateProfile(cred.user, { displayName: name.trim() });
 
       // 4. Tạo document người dùng trong Firestore
+      console.log('4. Đang tạo dữ liệu người dùng trong Firestore...');
       await setDoc(doc(db, 'users', cred.user.uid), { 
         name: name.trim(),
         email: cred.user.email, 
         createdAt: new Date() 
       });
+      console.log('--- Đăng ký hoàn tất thành công ---');
+      
+      if (Platform.OS === 'web') {
+        alert('Đăng ký thành công!');
+      }
     } catch (err: any) {
+      console.error('Lỗi đăng ký:', err.code, err.message);
       Alert.alert('Đăng ký thất bại', err.message);
     } finally {
       setLoading(false);
