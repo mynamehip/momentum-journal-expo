@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 import {
   collection,
   addDoc,
@@ -66,12 +67,18 @@ const uploadMedia = async (uri: string): Promise<string> => {
     if (ext === 'mp4' || ext === 'mov') type = 'video/mp4';
     else if (ext === 'm4a' || ext === 'wav' || ext === 'mp3') type = 'audio/mpeg';
 
-    // @ts-ignore - FormData trong React Native nhận object có uri
-    formData.append('file', {
-      uri,
-      type,
-      name: `upload.${ext}`,
-    });
+    if (Platform.OS === 'web') {
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      formData.append('file', blob, `upload.${ext}`);
+    } else {
+      // @ts-ignore - FormData trong React Native nhận object có uri
+      formData.append('file', {
+        uri,
+        type,
+        name: `upload.${ext}`,
+      });
+    }
     formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
 
     const response = await fetch(
@@ -81,7 +88,6 @@ const uploadMedia = async (uri: string): Promise<string> => {
         body: formData,
         headers: {
           'Accept': 'application/json',
-          'Content-Type': 'multipart/form-data',
         },
       }
     );
