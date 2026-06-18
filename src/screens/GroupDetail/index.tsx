@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Modal, Share, Alert, TextInput, Animated, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Modal, Share, Alert, TextInput, Animated, ActivityIndicator, Platform } from 'react-native';
+import * as htmlToImage from 'html-to-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation, useRoute, RouteProp, NavigationProp } from '@react-navigation/native';
@@ -113,6 +114,39 @@ const GroupDetailScreen: React.FC = () => {
   };
 
   const saveCardAsImage = async (entryId: string) => {
+    if (Platform.OS === 'web') {
+      const node = cardRefs.current[entryId];
+      if (node) {
+        try {
+          // html-to-image chụp lại toàn bộ cấu trúc DOM của thẻ Card
+          const dataUrl = await htmlToImage.toPng(node);
+          const link = document.createElement('a');
+          link.download = `moment-${entryId}.png`;
+          link.href = dataUrl;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          Alert.alert('Thành công', 'Đã tải ảnh bài viết về máy!');
+        } catch (error) {
+          console.error('Web capture error:', error);
+          // Fallback nếu có lỗi chụp ảnh thì tải file thô
+          const entry = data.find(item => item.id === entryId);
+          if (entry?.mediaUrl) {
+            const link = document.createElement('a');
+            link.href = entry.mediaUrl;
+            link.target = '_blank';
+            link.click();
+            Alert.alert('Thành công', 'Đã mở hình ảnh trong tab mới để lưu.');
+          } else {
+            Alert.alert('Lỗi', 'Không thể lưu ảnh bài viết.');
+          }
+        }
+      } else {
+        Alert.alert('Lỗi', 'Không tìm thấy thẻ bài viết để lưu.');
+      }
+      return;
+    }
+
     try {
       const { status } = await MediaLibrary.requestPermissionsAsync(true);
       if (status !== 'granted') return Alert.alert('Quyền truy cập', 'Vui lòng cấp quyền truy cập thư viện ảnh.');

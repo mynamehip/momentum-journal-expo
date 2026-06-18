@@ -62,20 +62,25 @@ const uploadMedia = async (uri: string): Promise<string> => {
   try {
     const formData = new FormData();
     
-    const ext = uri.split('.').pop()?.toLowerCase() || 'jpg';
-    let type = 'image/jpeg';
-    if (ext === 'mp4' || ext === 'mov') type = 'video/mp4';
-    else if (ext === 'm4a' || ext === 'wav' || ext === 'mp3') type = 'audio/mpeg';
+    let mimeType = 'image/jpeg';
+    let ext = 'jpg';
 
     if (Platform.OS === 'web') {
       const response = await fetch(uri);
       const blob = await response.blob();
+      mimeType = blob.type || 'image/jpeg';
+      ext = mimeType.split('/').pop() || 'jpg';
+      if (ext === 'quicktime') ext = 'mov';
       formData.append('file', blob, `upload.${ext}`);
     } else {
+      ext = uri.split('.').pop()?.toLowerCase() || 'jpg';
+      if (ext === 'mp4' || ext === 'mov') mimeType = 'video/mp4';
+      else if (ext === 'm4a' || ext === 'wav' || ext === 'mp3') mimeType = 'audio/mpeg';
+
       // @ts-ignore - FormData trong React Native nhận object có uri
       formData.append('file', {
         uri,
-        type,
+        type: mimeType,
         name: `upload.${ext}`,
       });
     }
