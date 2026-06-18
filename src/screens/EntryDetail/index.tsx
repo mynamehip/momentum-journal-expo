@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Platform } from 'react-native';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -25,24 +25,56 @@ const EntryDetailScreen: React.FC = () => {
   const moodCol = MOOD_COLORS[Math.max(1, Math.min(9, Math.round(entry.moodScore)))] || '#66BB6A';
   
   // --- Xử lý Audio ---
-  const aSource: AudioSource | null = (entry.localUri || entry.mediaUrl) 
-    ? { uri: entry.localUri || optimizeCloudinaryUrl(entry.mediaUrl) } 
-    : null;
+  const [audioSource, setAudioSource] = useState(() => {
+    if (Platform.OS === 'web') {
+      return entry.mediaUrl || entry.localUri;
+    }
+    return entry.localUri || entry.mediaUrl;
+  });
+  const aSource: AudioSource | null = audioSource ? { uri: audioSource } : null;
   const audio = useAudioPlayer(aSource);
   
   // --- Xử lý Video ---
-  const vSource = (entry.localUri || entry.mediaUrl) && entry.type === MomentType.VIDEO 
-    ? (entry.localUri || optimizeCloudinaryUrl(entry.mediaUrl)) 
-    : null;
-  const video = useVideoPlayer(vSource, player => {
+  const [videoSource, setVideoSource] = useState(() => {
+    if (Platform.OS === 'web') {
+      return entry.mediaUrl || entry.localUri;
+    }
+    return entry.localUri || entry.mediaUrl;
+  });
+  const video = useVideoPlayer(videoSource || null, player => {
     player.loop = true;
     player.play();
   });
 
+  // Tự động chuyển đổi video sang link đám mây nếu link nội bộ bị lỗi
+  useEffect(() => {
+    if (video.status === 'error' && videoSource !== entry.mediaUrl && entry.mediaUrl) {
+      setVideoSource(entry.mediaUrl);
+      video.replaceAsync(entry.mediaUrl).then(() => {
+        video.play();
+      }).catch(err => console.error('Error fallback video:', err));
+    }
+  }, [video.status, videoSource, entry.mediaUrl]);
+
+  // --- Xử lý Ảnh ---
+  const [imgUri, setImgUri] = useState(() => {
+    if (Platform.OS === 'web') {
+      return entry.mediaUrl || entry.localUri;
+    }
+    return entry.localUri || entry.mediaUrl;
+  });
+
+  useEffect(() => {
+    const target = Platform.OS === 'web' ? (entry.mediaUrl || entry.localUri) : (entry.localUri || entry.mediaUrl);
+    setAudioSource(target);
+    setVideoSource(target);
+    setImgUri(target);
+  }, [entry.localUri, entry.mediaUrl]);
+
   const [aspectRatio, setAspectRatio] = useState(4 / 3);
 
   useEffect(() => {
-    const mainUri = entry.localUri || entry.mediaUrl;
+    const mainUri = Platform.OS === 'web' ? (entry.mediaUrl || entry.localUri) : (entry.localUri || entry.mediaUrl);
     if (entry.type === MomentType.PHOTO && mainUri) {
       Image.getSize(
         mainUri,
@@ -92,7 +124,12 @@ const EntryDetailScreen: React.FC = () => {
         {/* Hiển thị Ảnh */}
         {(entry.localUri || entry.mediaUrl) && entry.type === MomentType.PHOTO && (
           <Image 
-            source={{ uri: entry.localUri || optimizeCloudinaryUrl(entry.mediaUrl, 1000) }} 
+            source={{ uri: imgUri }} 
+            onError={() => {
+              if (imgUri !== entry.mediaUrl && entry.mediaUrl) {
+                setImgUri(entry.mediaUrl);
+              }
+            }}
             style={[styles.media, { aspectRatio }]} 
             resizeMode="contain" 
           />

@@ -18,6 +18,17 @@ const JournalCard = React.forwardRef<any, JournalCardProps>(({ entry, onPress, o
   const date = new Date(entry.createdAt);
   const handlePress = onPress || (() => navigation.navigate('EntryDetail', { entry }));
 
+  const [imgUri, setImgUri] = React.useState(() => {
+    if (Platform.OS === 'web') {
+      return entry.mediaUrl || entry.localUri;
+    }
+    return entry.localUri || entry.mediaUrl;
+  });
+
+  React.useEffect(() => {
+    setImgUri(Platform.OS === 'web' ? (entry.mediaUrl || entry.localUri) : (entry.localUri || entry.mediaUrl));
+  }, [entry.localUri, entry.mediaUrl]);
+
   return (
     <TouchableOpacity
       ref={ref}
@@ -44,10 +55,11 @@ const JournalCard = React.forwardRef<any, JournalCardProps>(({ entry, onPress, o
       {entry.mediaUrl && (entry.type === MomentType.PHOTO || entry.type === MomentType.VIDEO) && (
         <View style={styles.polaroidImageWrapper}>
           <Image
-            source={{ 
-              uri: Platform.OS === 'web' 
-                ? optimizeCloudinaryUrl(entry.mediaUrl, 500) 
-                : (entry.localUri || optimizeCloudinaryUrl(entry.mediaUrl, 500)) 
+            source={{ uri: imgUri }}
+            onError={() => {
+              if (imgUri !== entry.mediaUrl && entry.mediaUrl) {
+                setImgUri(entry.mediaUrl);
+              }
             }}
             style={styles.polaroidImage}
             resizeMode="cover"
