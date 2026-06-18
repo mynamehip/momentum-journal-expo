@@ -103,7 +103,7 @@ const EntryDetailScreen: React.FC = () => {
           <VideoView
             player={video}
             style={styles.media}
-            allowsFullscreen
+            fullscreenOptions={{ enable: true }}
             allowsPictureInPicture
             nativeControls={true}
           />

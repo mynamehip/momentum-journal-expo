@@ -21,9 +21,10 @@ import { STORAGE_KEYS } from '../constants';
 const STORAGE_KEY = STORAGE_KEYS.ENTRIES;
 
 // Helper to get local entries
-const getLocalEntries = async (): Promise<JournalEntry[]> => {
+const getLocalEntries = async (userId?: string | null): Promise<JournalEntry[]> => {
   try {
-    const stored = await AsyncStorage.getItem(STORAGE_KEY);
+    const key = userId ? `${STORAGE_KEY}_${userId}` : STORAGE_KEY;
+    const stored = await AsyncStorage.getItem(key);
     return stored ? JSON.parse(stored) : [];
   } catch (error) {
     console.error('Error reading local entries:', error);
@@ -32,9 +33,10 @@ const getLocalEntries = async (): Promise<JournalEntry[]> => {
 };
 
 // Helper to save local entries
-const saveLocalEntries = async (entries: JournalEntry[]) => {
+const saveLocalEntries = async (entries: JournalEntry[], userId?: string | null) => {
   try {
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+    const key = userId ? `${STORAGE_KEY}_${userId}` : STORAGE_KEY;
+    await AsyncStorage.setItem(key, JSON.stringify(entries));
   } catch (error) {
     console.error('Error saving local entries:', error);
   }
@@ -124,7 +126,7 @@ export const getEntries = async (
   pageSize: number = 20,
   lastVisibleDoc: any = null
 ): Promise<{ entries: JournalEntry[]; lastDoc: any; hasMore: boolean }> => {
-  const localEntries = await getLocalEntries();
+  const localEntries = await getLocalEntries(userId);
   
   // Neu khong co userId (Guest mode)
   if (!userId) {
@@ -158,7 +160,7 @@ export const getEntries = async (
     // Luu local cache chi cho trang dau tien de tranh lam phinh AsyncStorage
     if (!lastVisibleDoc) {
       const merged = mergeEntries(remoteEntries, localEntries);
-      await saveLocalEntries(merged);
+      await saveLocalEntries(merged, userId);
     }
 
     return {
@@ -174,12 +176,12 @@ export const getEntries = async (
   }
 };
 
-const replaceLocalEntryId = async (localId: string, newId: string): Promise<void> => {
-  const currentEntries = await getLocalEntries();
+const replaceLocalEntryId = async (localId: string, newId: string, userId?: string | null): Promise<void> => {
+  const currentEntries = await getLocalEntries(userId);
   const updatedEntries = currentEntries.map((entry) =>
     entry.id === localId ? { ...entry, id: newId } : entry
   );
-  await saveLocalEntries(updatedEntries);
+  await saveLocalEntries(updatedEntries, userId);
 };
 
 export const saveEntry = async (
@@ -189,8 +191,8 @@ export const saveEntry = async (
   const localId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const localEntry: JournalEntry = { ...entry, id: localId };
 
-  const currentEntries = await getLocalEntries();
-  await saveLocalEntries([localEntry, ...currentEntries]);
+  const currentEntries = await getLocalEntries(userId);
+  await saveLocalEntries([localEntry, ...currentEntries], userId);
 
   if (!userId) {
     return localEntry;
@@ -200,7 +202,7 @@ export const saveEntry = async (
     const entriesRef = collection(db, 'users', userId, 'entries');
     const docRef = await addDoc(entriesRef, { ...entry, userId });
     const cloudEntry: JournalEntry = { ...entry, id: docRef.id, userId };
-    await replaceLocalEntryId(localId, docRef.id);
+    await replaceLocalEntryId(localId, docRef.id, userId);
     return cloudEntry;
   } catch (error) {
     console.error('Error saving entry to cloud:', error);
@@ -216,9 +218,9 @@ export const deleteEntry = async (userId: string | null | undefined, entryId: st
     }
 
     // 2. Update Local Cache (always)
-    const currentEntries = await getLocalEntries();
+    const currentEntries = await getLocalEntries(userId);
     const updatedEntries = currentEntries.filter(e => e.id !== entryId);
-    await saveLocalEntries(updatedEntries);
+    await saveLocalEntries(updatedEntries, userId);
 
   } catch (error) {
     console.error('Error deleting entry:', error);
@@ -227,7 +229,7 @@ export const deleteEntry = async (userId: string | null | undefined, entryId: st
 };
 
 export const syncLocalEntriesToCloud = async (userId: string): Promise<{ synced: number; skipped: number }> => {
-  const localEntries = await getLocalEntries();
+  const localEntries = await getLocalEntries(null);
   if (localEntries.length === 0) {
     return { synced: 0, skipped: 0 };
   }
@@ -263,7 +265,8 @@ export const syncLocalEntriesToCloud = async (userId: string): Promise<{ synced:
   }
 
   const merged = mergeEntries([...remoteEntries, ...newlySynced], []);
-  await saveLocalEntries(merged);
+  await saveLocalEntries(merged, userId);
+  await saveLocalEntries([], null);
 
   return { synced, skipped };
 };
@@ -271,7 +274,8 @@ export const syncLocalEntriesToCloud = async (userId: string): Promise<{ synced:
 export const clearAllData = async (userId?: string | null): Promise<void> => {
   try {
     // 1. Xóa dữ liệu cục bộ (Local)
-    await AsyncStorage.removeItem(STORAGE_KEY);
+    const key = userId ? `${STORAGE_KEY}_${userId}` : STORAGE_KEY;
+    await AsyncStorage.removeItem(key);
     
     // 2. Xóa dữ liệu trên Cloud (Firestore) nếu người dùng đã đăng nhập
     if (userId) {
@@ -437,8 +441,8 @@ export const saveEntryToDestinations = async (
   if (!userId) {
     const localId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const localEntry: JournalEntry = { ...entry, id: localId };
-    const currentEntries = await getLocalEntries();
-    await saveLocalEntries([localEntry, ...currentEntries]);
+    const currentEntries = await getLocalEntries(null);
+    await saveLocalEntries([localEntry, ...currentEntries], null);
     return;
   }
 
